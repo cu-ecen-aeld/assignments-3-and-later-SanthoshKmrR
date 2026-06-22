@@ -1,4 +1,9 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <unistd.h> // For fork() and execv()
+#include <sys/types.h> // For pid_t
+#include <sys/wait.h> // For wait()
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,7 +21,12 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
-
+	int ret = system(cmd);
+    printf("System ret - %d\n", ret);
+    if( ret == -1)
+    {
+        return false;
+    }
     return true;
 }
 
@@ -58,9 +68,30 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+	 int status;
+    pid_t pid=fork();
 
+    if( pid < 0) // child forking failed
+        return false;
+    
+    // forking success and now process is in child node, these lines will execute in child pid
+    if ( pid == 0 ){
+        execv( command[0], command);
+        perror("execv error"); // This line only executes if execv fails
+        exit(EXIT_FAILURE);
+    }
+    else{ // Parent process wait until child is closed
+        printf("Parent is waiting\n");
+        if (waitpid(pid, &status, 0) == -1) {
+            return false;
+        }
+        printf("Child is completed\n");
+    }
+    
     va_end(args);
-
+		
+	 return WIFEXITED(status) && WEXITSTATUS(status) == 0; // status should be 0 if child executed successfully.
+	 
     return true;
 }
 
@@ -92,7 +123,33 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+	 int status = 0;
+    pid_t pid = fork();
 
+    if( pid < 0) // for failed
+        return false;
+
+
+    if( pid == 0 ){ // child process
+        int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) { 
+            _exit(1);
+        }
+        if (dup2(fd, 1) < 0) { //dup2 command is used to duplicate this file descriptor to current process stdout
+            close(fd);
+            _exit(1);
+        }
+        close(fd);
+        execv(command[0],command);
+    }
+    else{ // parent
+        printf("Parent is waiting\n");
+        if (waitpid(pid, &status, 0) == -1) {
+            return false;
+        }
+        printf("Child is completed\n");
+    }
+    
     va_end(args);
 
     return true;

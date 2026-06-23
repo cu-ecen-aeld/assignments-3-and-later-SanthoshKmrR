@@ -32,7 +32,7 @@ echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
-assignment=`cat ../conf/assignment.txt`
+assignment=`cat ./conf/assignment.txt`
 
 if [ $assignment != 'assignment1' ]
 then
@@ -52,9 +52,20 @@ fi
 #make clean
 #make
 
+FILE="writer"
+
+if [ -f "$FILE" ]; then
+    echo "$FILE exists in this folder."
+    chmod +x $FILE
+else
+    echo "$FILE does not exist in this folder."
+fi
+
 for i in $( seq 1 $NUMFILES)
 do
-	./writer.sh "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+   #echo ${PWD}
+   #ls -la ${PWD}
+	$FILE "$WRITEDIR/${username}$i.txt" "$WRITESTR"
 done
 
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")

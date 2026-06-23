@@ -57,7 +57,7 @@ echo " Files in Kernel Build $PWD"
 ls ${OUTDIR}/linux-stable/arch/${ARCH}/boot/
 cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ${OUTDIR}/
 
-echo "Creating the staging directory for the root filesystem"
+echo "Creating the staging directory for the root filesystem ${OUTDIR}"
 cd "$OUTDIR"
 if [ -d "${OUTDIR}/rootfs" ]
 then
@@ -92,23 +92,25 @@ make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make CONFIG_PREFIX=../rootfs/ ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 
 echo "***** Library dependencies *****"
-${CROSS_COMPILE}readelf -a ../rootfs/bin/busybox | grep "program interpreter"
-${CROSS_COMPILE}readelf -a ../rootfs/bin/busybox | grep "Shared library"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "program interpreter"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
 echo "*** CC_FOLDER ****"
 CC_FOLDER=$(${CROSS_COMPILE}gcc -print-sysroot) # find crosscompiler folder location
 
 echo "*** COPY to CC_FOLDER ****"
-cp -a $CC_FOLDER/lib/ld-linux-aarch64.so.1 ../${OUTDIR}/rootfs/lib/
-cp -a $CC_FOLDER/lib64/libm.so.6 ../${OUTDIR}/rootfs/lib64/
-cp -a $CC_FOLDER/lib64/libresolv.so.2 ../${OUTDIR}/rootfs/lib64/
-cp -a $CC_FOLDER/lib64/libc.so.6 ../${OUTDIR}/rootfs/lib64/
+echo $CC_FOLDER
+echo "****"
+cp -a $CC_FOLDER/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib/
+cp -a $CC_FOLDER/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64/
+cp -a $CC_FOLDER/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64/
+cp -a $CC_FOLDER/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64/
 
 # TODO: Make device nodes
 echo "*** Make Nodes ****"
-sudo mknod -m 666 ../${OUTDIR}/rootfs/dev/null c 1 3
-sudo mknod -m 666 ../${OUTDIR}/rootfs/dev/console c 5 1
+sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
+sudo mknod -m 666 ${OUTDIR}/rootfs/dev/console c 5 1
 
 # TODO: Clean and build the writer utility
 echo "*** find and rebuild writer **** "
@@ -117,24 +119,26 @@ echo $PWD
 echo ${FINDER_APP_DIR}
 make clean
 make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
+cp ${FINDER_APP_DIR}/writer ${OUTDIR}/rootfs/bin/
 cd ${OUTDIR}
 
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 echo "*** copy assign2 files to root fs **** "
-cp -rf ${OUTDIR}/../finder-app/* ${OUTDIR}/rootfs/home/
+cp -rf ${FINDER_APP_DIR}/* ${OUTDIR}/rootfs/home/
 rm -rf ${OUTDIR}/rootfs/home/conf 
 mkdir ${OUTDIR}/rootfs/home/conf
-cp -rf ${OUTDIR}/../conf/* ${OUTDIR}/rootfs/home/conf/
+ls ${FINDER_APP_DIR}/../conf/
+cp -rf ${FINDER_APP_DIR}/../conf/* ${OUTDIR}/rootfs/home/conf/
 
 # TODO: Chown the root directory
 echo "*** change OWN **** "
 sudo chown root:root ${OUTDIR}/rootfs #change owner to root of root folder
 
 # TODO: Create initramfs.cpio.gz
-echo "*** create CRAM info ****"
+echo "*** create RAMFS info ****"
 cd ${OUTDIR}/rootfs
-echo $PWD
-find . | cpio -H newc -ov --owner root:root > ../${OUTDIR}/initramfs.cpio
-cd ../${OUTDIR}
-gzip -f initramfs.cpio
+echo "***** $PWD ******"
+find . | cpio -H newc -ov --owner root:root > ${OUTDIR}/initramfs.cpio
+#cd ../${OUTDIR}
+gzip -f ${OUTDIR}/initramfs.cpio

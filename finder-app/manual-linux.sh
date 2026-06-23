@@ -82,7 +82,7 @@ git clone git://git.busybox.net/busybox.git
     # TODO:  Configure busybox
     # configure busybox in rootfs folder
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} menuconfig
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} menuconfig
 else
     cd busybox
 fi

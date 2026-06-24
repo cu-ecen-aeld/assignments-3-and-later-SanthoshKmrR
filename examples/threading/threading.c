@@ -15,7 +15,7 @@ void* threadfunc(void* thread_param)
     // hint: use a cast like the one below to obtain thread arguments from your parameter
     //struct thread_data* thread_func_args = (struct thread_data *) thread_param;
     
-    thread_data *ptr = (thread_data) thread_param;
+    struct thread_data *ptr = (struct thread_data) thread_param;
     if ( ptr == NULL ) {
     	return NULL;
     }
@@ -59,9 +59,9 @@ bool start_thread_obtaining_mutex(pthread_t *thread, pthread_mutex_t *mutex,int 
      */
      
     // Allocate memory for thread data structure
-    thread_data *thread_data_ptr = (thread_data *)malloc(sizeof(thread_data));
+    struct thread_data *thread_data_ptr = (struct thread_data *)malloc(sizeof(struct thread_data));
     if (thread_data_ptr == NULL) {
-        free(ptr);
+        free(thread_data_ptr);
         return false;
     }
     

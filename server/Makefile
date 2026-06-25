@@ -1,12 +1,13 @@
 
 CC := $(CROSS_COMPILE)gcc
+CFLAGS := -Wall -Werror
 
 all: aesdsocket
 build: aesdsocket
 default: aesdsocket
 
 aesdsocket: aesdsocket.c
-	$(CC) aesdsocket.c -o aesdsocket
+	$(CC) $(CFLAGS) aesdsocket.c -o aesdsocket
 
 clean:
 	rm -f aesdsocket 

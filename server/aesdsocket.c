@@ -77,8 +77,10 @@ static void *timestamp_thread(void *arg)
         if (fp != NULL) {
             fwrite(stamp, 1, len, fp);
             fclose(fp);
+            printf("File Open and write success for timestamp\n");
         } else {
             syslog(LOG_ERR, "timestamp fopen failed: %s", strerror(errno));
+            printf("File Open error for timestamp\n");
         }
         pthread_mutex_unlock(&file_mutex);
     }
@@ -86,7 +88,7 @@ static void *timestamp_thread(void *arg)
     return NULL;
 }
 
-/* Per-client worker. Reads newline-terminated packets, appends each to the
+/* each client worker. Reads newline-terminated packets, appends each to the
  * shared file and echoes the whole file back, until the client disconnects
  * or a signal is caught. Then marks itself complete so main() can join it. */
 static void *handle_client(void *arg)
@@ -207,9 +209,23 @@ int main(int argc, char **argv)
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port        = htons(LISTEN_PORT);
 
-	//bind the server socket
-    if (bind(server_socket, (struct sockaddr *)&server_address,
-             sizeof(server_address)) < 0) {
+	//bind the server socket. 
+    //in socket-test.sh just-killed previous instance can still hold the port for a moment 
+    //which makes bind() fail with EADDRINUSE and the
+	//process exit -1 (255). Retry for a few seconds
+	//only give up on a persistent or non-EADDRINUSE error.
+    int bind_rc = -1;
+    for (int attempt = 0; attempt < 5 && !exit_requested; attempt++) {
+        bind_rc = bind(server_socket, (struct sockaddr *)&server_address,
+                       sizeof(server_address));
+        if (bind_rc == 0 || errno != EADDRINUSE)
+            break;
+        syslog(LOG_WARNING, "bind: port %d in use, retrying (%d)",
+               LISTEN_PORT, attempt);
+        usleep((10*1000*1000));   /* Wait for sometime to release the port from previous kill */
+    }
+
+    if (bind_rc < 0) {
         syslog(LOG_ERR, "bind failed: %s", strerror(errno));
         close(server_socket);
         return -1;

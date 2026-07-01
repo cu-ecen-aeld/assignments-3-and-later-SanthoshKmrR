@@ -1,7 +1,7 @@
 
-CC := $(CROSS_COMPILE)gcc
-CFLAGS := -Wall -Werror -pthread
-LDFLAGS := -pthread
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS += -Wall -Werror -pthread
+LDFLAGS += -pthread
 
 all: aesdsocket
 build: aesdsocket

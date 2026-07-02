@@ -32,6 +32,31 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     /**
     * TODO: implement per description
     */
+    uint8_t index = buffer->out_offs;
+    uint8_t count;
+
+    /* Walk from the oldest entry (out_offs) forward, one entry per iteration.
+     * The number of valid entries is AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED
+     * when full, otherwise (in_offs - out_offs) wrapped. */
+    uint8_t valid = buffer->full ?
+        AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED :
+        (buffer->in_offs - buffer->out_offs + AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)
+            % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+    for (count = 0; count < valid; count++) {
+        struct aesd_buffer_entry *entry = &buffer->entry[index];
+
+        if (char_offset < entry->size) {
+            /* char_offset lands inside this entry */
+            *entry_offset_byte_rtn = char_offset;
+            return entry;
+        }
+        /* skip past this entry and keep looking */
+        char_offset -= entry->size;
+        index = (index + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    }
+
+    /* offset is beyond the data currently stored */
     return NULL;
 }
 
@@ -47,6 +72,23 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
     /**
     * TODO: implement per description
     */
+
+    /* Store the new entry at the current write position. */
+    buffer->entry[buffer->in_offs] = *add_entry;
+
+    if (buffer->full) {
+        /* Buffer was already full: the entry we just overwrote was the oldest,
+         * so advance out_offs to point at the new oldest entry. */
+        buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    }
+
+    /* Advance the write position. */
+    buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+    /* If the write pointer caught up with the read pointer, the buffer is full. */
+    if (buffer->in_offs == buffer->out_offs) {
+        buffer->full = true;
+    }
 }
 
 /**
